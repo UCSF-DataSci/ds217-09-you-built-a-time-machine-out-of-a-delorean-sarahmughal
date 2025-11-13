@@ -127,44 +127,62 @@ print(f"Missing visits: ~{200 * 365 - len(patient_vitals):,} records")
 **TODO: Handle time zones**
 
 ```python
-# TODO: Create timezone-aware datetime (for multi-site clinical trials)
-# utc_time = None  # Current time in UTC
-# eastern_time = None  # Convert to US Eastern
+# Create timezone-aware datetime (for multi-site clinical trials)
+utc_time = pd.Timestamp.now(tz='UTC')  # Current time in UTC
+eastern_time = utc_time.tz_convert('US/Eastern')  # Convert to US Eastern
 
-# TODO: Convert between different timezones
+print("Current UTC time:", utc_time)
+print("Current Eastern time:", eastern_time)
+
+# Convert between different timezones
 # Create timezone-aware DataFrame from patient_vitals
-# patient_vitals_tz = None  # Localize to UTC
-# patient_vitals_tz_eastern = None  # Convert to Eastern time
+patient_vitals_tz = patient_vitals.copy()
+patient_vitals_tz['date'] = pd.to_datetime(patient_vitals_tz['date'])
+patient_vitals_tz = patient_vitals_tz.set_index('date').sort_index()
+patient_vitals_tz = patient_vitals_tz.tz_localize('UTC')  # Localize to UTC
+patient_vitals_tz_eastern = patient_vitals_tz.tz_convert('US/Eastern')  # Convert to Eastern time
 
-# TODO: Handle daylight saving time transitions
+print("First UTC timestamp in dataset:", patient_vitals_tz.index[0])
+print("First Eastern timestamp in dataset:", patient_vitals_tz_eastern.index[0])
+
+# Handle daylight saving time transitions
 # Create datetime that spans DST transition
 # Note: Using UTC avoids DST ambiguity issues - UTC has no daylight saving time
 # Best practice: Store data in UTC, convert to local timezones only when needed
-# dst_date_utc = pd.Timestamp('2023-03-12 10:00:00', tz='UTC')  # UTC time avoids DST issues
-# dst_time_eastern = dst_date_utc.tz_convert('US/Eastern')  # Convert UTC to Eastern
+dst_date_utc = pd.Timestamp('2023-03-12 10:00:00', tz='UTC')  # UTC time avoids DST issues
+dst_time_eastern = dst_date_utc.tz_convert('US/Eastern')  # Convert UTC to Eastern
 
-# TODO: Document timezone operations
-# Create a report string with the following sections:
-# 1. Original timezone: Describe what timezone your original data was in (or if it was naive)
-# 2. Localization method: Explain how you localized the data (e.g., tz_localize('UTC'))
-# 3. Conversion: Describe what timezone you converted to (e.g., 'US/Eastern')
-# 4. DST handling: Document any issues or observations about daylight saving time transitions
-#    Note: Explain why using UTC as the base timezone avoids DST ambiguity issues
-# 5. Example: Show at least one example of a datetime before and after conversion
-# Minimum length: 200 words
-timezone_report = """
-TODO: Document your timezone operations:
-- What timezone was your original data in?
-- How did you localize the data?
-- What timezone did you convert to?
-- What issues did you encounter with DST? (Note: Using UTC avoids DST ambiguity)
-- Include at least one example showing a datetime before and after conversion
-- Explain why UTC is recommended as the base timezone for storing temporal data
+print("DST example (UTC):", dst_date_utc)
+print("DST example (US/Eastern):", dst_time_eastern)
+
+# Document timezone operations
+sample_original = pd.to_datetime(patient_vitals.loc[0, 'date'])
+sample_utc = patient_vitals_tz.index[0]
+sample_eastern = patient_vitals_tz_eastern.index[0]
+
+timezone_report = f"""
+The patient vital signs file arrived with naive datestamps in the 'date' column, so the timestamps
+had no timezone context and could have been interpreted differently by each analyst. I treated the
+incoming values as Coordinated Universal Time (UTC) because the monitoring program aggregates data
+from multiple clinic sites, and UTC is the safest common denominator. After copying the DataFrame,
+I converted the 'date' column to pandas datetime objects, set it as the index, and sorted the index
+so localization would proceed without ambiguity. Calling tz_localize('UTC') on the DatetimeIndex
+explicitly records that every measurement is stored in UTC, which is the recommended storage zone
+because UTC never observes daylight saving time. Once the data were anchored to UTC, I used
+tz_convert('US/Eastern') to generate a view that clinic staff in New York can read natively. For
+example, the first recorded visit originally appeared as {sample_original} (naive), localizes to
+{sample_utc} in UTC, and becomes {sample_eastern} when converted to Eastern time.
+
+To illustrate daylight saving behavior, I created a UTC timestamp for 2023-03-12 10:00, the spring
+forward transition day in the United States, and converted it to US/Eastern. The conversion produced
+06:00 Eastern, demonstrating that UTC stays continuous while the local timezone jumps over the
+missing hour. Because UTC never repeats or skips hours, storing data in UTC shields the warehouse
+from DST gaps or overlaps, and localized copies can be generated for any regional team when needed.
 """
 
-# TODO: Save results as 'output/q1_timezone_report.txt'
-# with open('output/q1_timezone_report.txt', 'w') as f:
-#     f.write(timezone_report)
+# Save results as 'output/q1_timezone_report.txt'
+with open('output/q1_timezone_report.txt', 'w') as f:
+    f.write(timezone_report.strip())
 ```
 
 ## Submission Checklist
@@ -173,4 +191,3 @@ Before moving to Question 2, verify you've created:
 
 - [ ] `output/q1_datetime_analysis.csv` - datetime analysis results
 - [ ] `output/q1_timezone_report.txt` - timezone handling report
-

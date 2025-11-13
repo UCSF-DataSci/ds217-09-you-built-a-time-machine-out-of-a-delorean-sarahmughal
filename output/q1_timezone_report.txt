@@ -1,0 +1,16 @@
+Timezone Operations Report
+
+1. Original Timezone
+The original patient_vitals data was loaded with a naive datetime column, meaning the dates had no explicit timezone information attached. In practice, this often means the timestamps are assumed to be in the local clinic or hospital time, but pandas treats them as timezone-unaware. This can become problematic when data are combined across sites or compared to systems that do use explicit timezones.
+
+2. Localization Method
+To make the timestamps explicit and comparable, we first converted the 'date' column to a proper datetime type and set it as the DataFrame index. We then localized this naive DatetimeIndex to UTC using tz_localize('UTC'). This step does not change the actual clock values; it simply tells pandas, “these timestamps should be interpreted as UTC.”
+
+3. Conversion
+After localization, we created a second version of the data by converting from UTC to the 'US/Eastern' timezone using tz_convert('US/Eastern'). This produces timezone-aware timestamps that reflect Eastern time while still representing the same underlying instants in time as the UTC values.
+
+4. DST Handling
+We illustrated daylight saving time handling with the example 2023-03-12 10:00:00 UTC, which converts to 2023-03-12 06:00:00-04:00 in US/Eastern. On this date, the Eastern timezone switches from standard time to daylight saving time, and the offset changes from UTC-5 to UTC-4. Because we store the data in UTC and only convert to local timezones when needed, pandas can automatically handle this offset change without ambiguity. There is no “missing hour” in UTC, so the representation is stable and consistent.
+
+5. Example of Conversion
+For example, 2023-03-12 10:00:00+00:00 in UTC becomes 2023-03-12 06:00:00-04:00 in US/Eastern. The underlying moment in time is identical, but the local clock time and UTC offset differ. This demonstrates why UTC is recommended as the base timezone for storing temporal data in clinical and multi-site studies: it avoids DST confusion, makes cross-site comparisons easier, and defers any local-time formatting to the very end of the analysis or reporting pipeline.

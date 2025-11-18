@@ -1,0 +1,49 @@
+
+Missing Data Report
+
+1. Missing Value Summary
+In total, the missing value count was 323, accounting for roughly 96.4% of the dataset. This isn’t surprising since expanding monthly data into daily data creates far more dates than original measurements.
+
+2. Missing Data Patterns
+The missingness followed a very predictable pattern: every month-end date had a real recorded temperature, while all the other days in between were empty. There wasn’t any unusual behavior tied to certain months, days of the week, or seasons—it was simply a result of how the data was resampled. Because of this, the missing values didn’t represent errors or sensor failures but were instead an artifact of changing the time granularity.
+
+3. Imputation Method
+To handle the missing values, I used a rolling mean with a 3-day window. I also tried forward fill, backward fill, and interpolation, but the rolling mean felt like the best balance between smoothness and realism. It avoids the “flat-line” effect that forward fill creates and doesn’t rely too heavily on future data like backward fill does.
+
+4. Rationale
+The rolling mean works well here because temperature tends to change gradually rather than jumping sharply from one day to the next. Using neighboring values to fill gaps gives a smoother and more natural-looking time series. It also reduces the risk of introducing unrealistic spikes.
+
+5. Pros and Cons
+The main advantage is that rolling averages are easy to interpret and produce stable, smoothed values. The downside is that they can slightly blur real peaks or dips, especially with a small window size. Still, for this dataset, the trade-off felt reasonable.
+
+6. Example
+Before imputation, a typical stretch looked like: [98.777, NaN, NaN, NaN]. After applying the rolling mean, it became something like: [98.777, 98.777, 98.777, NaN] because I chose a window of 3, which fills the gaps without creating abrupt jumps, but also doesn't over-smooth the data.
+
+
+Missing Patterns:
+Missing By Month:
+date
+1      0
+2     27
+3     30
+4     29
+5     30
+6     29
+7     30
+8     30
+9     29
+10    30
+11    29
+12    30
+Name: temperature, dtype: int64
+
+Missing By Day Of Week:
+date
+0    46
+1    45
+2    47
+3    46
+4    46
+5    47
+6    46
+Name: temperature, dtype: int64
